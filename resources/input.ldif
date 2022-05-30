@@ -1,0 +1,37 @@
+version: 1
+
+dn: uid=alphaname,ou=b,ou=users
+objectclass: top
+objectclass: inetOrgPerson
+uid: alphaname
+givenName: Alpha
+sn: Name
+mail: aname@email.com
+manager: uid=alphaname,ou=b,ou=users
+
+dn: uid=betaname,ou=b,ou=users
+objectclass: top
+objectclass: inetOrgPerson
+uid: betaname
+givenName: Beta
+sn: Name
+mail: bname@email.com
+manager: uid=betaname,ou=b,ou=users
+
+dn: uid=gammaname,ou=g,ou=users
+objectclass: top
+objectclass: inetOrgPerson
+uid: gammaname
+givenName: Gamma
+sn: Name
+mail: gname@email.com
+manager: uid=gammaname,ou=g,ou=users
+
+dn: uid=delataname,ou=d,ou=users
+objectclass: top
+objectclass: inetOrgPerson
+uid: delataname
+givenName: Delta
+sn: Name
+mail: dname@email.com
+manager: uid=delataname,ou=d,ou=users

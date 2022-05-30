@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:batch="http://www.springframework.org/schema/batch"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+                           http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+                           http://www.springframework.org/schema/util 
+                           http://www.springframework.org/schema/util/spring-util.xsd
+                           http://www.springframework.org/schema/tx
+                           http://www.springframework.org/schema/tx/spring-tx.xsd">
+						   
+	<util:properties id="appProperties" location="file:#{systemProperties['property.location']}"/> 
+	
+	<context:property-placeholder properties-ref="appProperties" />
+	
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.user}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+	
+	<bean id="dbTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<bean id="dbOperations" class="spring.batch.jdbc.DBOperations">
+		<property name="jdbcTemplate" ref="jdbcTemplate"/>
+		<property name="tableName" value="USERS"/>
+	</bean>
+	
+	<!-- Transaction Manager -->
+	<bean id="transactionManager" class="org.springframework.batch.support.transaction.ResourcelessTransactionManager" />
+   
+    <bean id="userExtractJobProcessor" class="spring.batch.jobprocessor.UsersExtractJobProcessor" />
+    		   
+   	<!-- Batch job repository -->
+	<bean id="jobRepository" class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+           <property name="transactionManager" ref="transactionManager" />
+    </bean>
+    
+    <!-- Batch Job Launcher -->
+	<bean id="jobLauncher" class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+           <property name="jobRepository" ref="jobRepository" />
+    </bean>
+    
+    <bean id="dnReader" scope="step" class="org.springframework.ldap.ldif.batch.LdifReader">
+           <property name="resource" value="file:#{jobParameters['input.file.name']}" />
+    </bean>
+    
+    <batch:job id="usersExtractJob" >
+           <batch:step id="step">
+                <batch:tasklet>
+                  <batch:chunk reader="dnReader" processor="userExtractJobProcessor" writer="dbWriter" commit-interval="1" />
+                </batch:tasklet>
+           </batch:step>
+    </batch:job> 
+    
+    <!-- LDIF file reader -->
+  	<bean id="ldifFileReader" scope="step" class="org.springframework.ldap.ldif.batch.LdifReader">
+    	<property name="resource" value="file:#{jobParameters['input.file.name']}" />
+    </bean>
+    
+	<bean id="dbWriter" scope="step" class="org.springframework.batch.item.database.JdbcBatchItemWriter">
+		<property name="sql" value="INSERT INTO USERS (USER_ID, USER_NAME, USER_FIRST_NAME, USER_LAST_NAME, USER_EMAIL, USER_LAST_LOGIN_TS) VALUES (?,?,?,?,?,?)"/>
+		<property name="itemPreparedStatementSetter">
+			<bean class="spring.batch.extractor.UserFieldsExtractor" />
+		</property>
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+</beans> 
